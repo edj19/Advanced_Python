@@ -1,0 +1,151 @@
+LAMMPS (3 Mar 2020)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (../comm.cpp:94)
+  using 1 OpenMP thread(s) per MPI task
+#simulation of PKA damage.
+units		metal
+boundary        p p p
+atom_style      atomic
+lattice 	bcc 3.1652
+Lattice spacing in x,y,z = 3.1652 3.1652 3.1652
+region		box block 0 75 0 75 0 15
+
+#create geomentry
+create_box	2 box
+Created orthogonal box = (0 0 0) to (237.39 237.39 47.478)
+  1 by 1 by 1 MPI processor grid
+create_atoms	1 region box
+Created 168750 atoms
+  create_atoms CPU = 0.0412632 secs
+
+# hybrid potentials
+pair_style	eam/alloy
+pair_coeff      * * W_zhou.eam.alloy W W
+Reading potential file W_zhou.eam.alloy with DATE: 2007-10-12
+
+neighbor	 0.3 bin
+neigh_modify	 delay 5
+
+#Equilibration step to make atoms and velocities consistent
+#with thermodynamic parameters
+velocity	 all create 300.0 893267 rot yes dist gaussian
+fix              1 all npt  temp 300.0 300.0 0.1 iso 0.0 0.0 0.5 drag 1.0
+
+#Outputs and Run
+thermo		 10
+thermo_style     custom step time temp press pe ke etotal lx ly lz
+timestep	 0.001
+run		 50
+Neighbor list info ...
+  update every 1 steps, delay 5 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 8.1925
+  ghost atom cutoff = 8.1925
+  binsize = 4.09625, bins = 58 58 12
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair eam/alloy, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 99.69 | 99.69 | 99.69 Mbytes
+Step Time Temp Press PotEng KinEng TotEng Lx Ly Lz 
+       0            0          300    1582.0333   -1478248.7    6543.7561     -1471705       237.39       237.39       47.478 
+      10         0.01    271.70388    1137.2683   -1477631.1    5926.5464   -1471704.6    237.41694    237.41694    47.483389 
+      20         0.02    200.27685    160.55782   -1476063.5    4368.5429   -1471694.9      237.481      237.481      47.4962 
+      30         0.03    117.79659   -673.16389   -1474247.2    2569.4404   -1471677.8    237.54576    237.54576    47.509151 
+      40         0.04    58.432216   -1012.8209   -1472939.7    1274.5539   -1471665.1    237.58165    237.58165    47.516329 
+      50         0.05    42.590351   -934.57275   -1472585.7    929.00288   -1471656.7    237.57976    237.57976    47.515953 
+Loop time of 97.0965 on 1 procs for 50 steps with 168750 atoms
+
+Performance: 0.044 ns/day, 539.425 hours/ns, 0.515 timesteps/s
+99.5% CPU use with 1 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 93.896     | 93.896     | 93.896     |   0.0 | 96.70
+Neigh   | 1.3239     | 1.3239     | 1.3239     |   0.0 |  1.36
+Comm    | 0.20023    | 0.20023    | 0.20023    |   0.0 |  0.21
+Output  | 0.04085    | 0.04085    | 0.04085    |   0.0 |  0.04
+Modify  | 1.4279     | 1.4279     | 1.4279     |   0.0 |  1.47
+Other   |            | 0.2074     |            |       |  0.21
+
+Nlocal:    168750 ave 168750 max 168750 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    97031 ave 97031 max 97031 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    1.19653e+07 ave 1.19653e+07 max 1.19653e+07 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 11965269
+Ave neighs/atom = 70.9053
+Neighbor list builds = 2
+Dangerous builds = 0
+
+#Starting PKA run
+#First unfix
+unfix            1
+
+#set PKA atom and velocity
+group            PKA id == 633
+1 atoms in group PKA
+velocity         PKA set 2.0e2 0.0 0.0 units box
+
+########################Calculation information#####################################
+compute mype all pe/atom
+compute myte all temp
+
+dump	         22 all custom 10 Wcascade1.dat.* id type x y z c_mype
+###################################################################################
+#setup computing and printing of parameters to characterize damage
+#dump             movie all xyz 10 W5keVCascade.xyz
+
+#Run cascade simulation
+fix              5 all dt/reset 10 1.0e-5 0.001 0.1 units box
+fix              1 all nve
+
+run              100
+Per MPI rank memory allocation (min/avg/max) = 125.2 | 125.2 | 125.2 Mbytes
+Step Time Temp Press PotEng KinEng TotEng Lx Ly Lz 
+      50         0.05    60.060462   -782.81101   -1472585.7      1310.07   -1471275.7    237.57976    237.57976    47.515953 
+      60        0.055    68.063744   -1136.5622   -1472760.4    1484.6418   -1471275.7    237.57976    237.57976    47.515953 
+      70  0.060065995    80.272915   -1624.2724     -1473027    1750.9546     -1471276    237.57976    237.57976    47.515953 
+      80  0.066237902    111.35615   -2390.7458   -1473705.1    2428.9582   -1471276.2    237.57976    237.57976    47.515953 
+      90  0.071596176    136.92834   -3006.1918   -1474262.9    2986.7522   -1471276.2    237.57976    237.57976    47.515953 
+     100   0.07712016    158.66208   -3504.3665   -1474736.9    3460.8198     -1471276    237.57976    237.57976    47.515953 
+     110  0.083762908    184.82579   -3878.2919   -1475307.5    4031.5162     -1471276    237.57976    237.57976    47.515953 
+     120   0.08951459    193.16081   -3903.3401     -1475489     4213.324   -1471275.7    237.57976    237.57976    47.515953 
+     130   0.09672652    199.15956   -3687.9368   -1475620.2    4344.1719   -1471276.1    237.57976    237.57976    47.515953 
+     140   0.10416752    191.69349   -3213.3603   -1475457.1    4181.3181   -1471275.8    237.57976    237.57976    47.515953 
+     150   0.11352705    183.05874   -2670.3147   -1475268.9    3992.9724   -1471275.9    237.57976    237.57976    47.515953 
+Loop time of 228.391 on 1 procs for 100 steps with 168750 atoms
+
+Performance: 0.038 ns/day, 634.421 hours/ns, 0.438 timesteps/s
+99.3% CPU use with 1 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 203.44     | 203.44     | 203.44     |   0.0 | 89.08
+Neigh   | 13.382     | 13.382     | 13.382     |   0.0 |  5.86
+Comm    | 0.63702    | 0.63702    | 0.63702    |   0.0 |  0.28
+Output  | 9.5857     | 9.5857     | 9.5857     |   0.0 |  4.20
+Modify  | 1.0395     | 1.0395     | 1.0395     |   0.0 |  0.46
+Other   |            | 0.3047     |            |       |  0.13
+
+Nlocal:    168750 ave 168750 max 168750 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    97031 ave 97031 max 97031 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    1.19583e+07 ave 1.19583e+07 max 1.19583e+07 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 11958297
+Ave neighs/atom = 70.864
+Neighbor list builds = 20
+Dangerous builds = 20
+
+clear
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (../comm.cpp:94)
+  using 1 OpenMP thread(s) per MPI task
+Total wall time: 0:05:33
